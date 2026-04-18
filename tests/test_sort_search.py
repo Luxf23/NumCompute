@@ -88,3 +88,64 @@ def test_binary_search_not_found():
     idx, found = binary_search(arr, 4)
     assert found is False
     assert idx == 2
+
+def test_topk_largest_sorted_output():
+    arr = np.array([5, 1, 9, 3, 7])
+    values, indices = topk(arr, 3)
+    assert np.array_equal(values, np.array([9, 7, 5]))
+
+
+def test_topk_smallest_sorted_output():
+    arr = np.array([5, 1, 9, 3, 7])
+    values, indices = topk(arr, 3, largest=False)
+    assert np.array_equal(values, np.array([1, 3, 5]))
+
+
+def test_topk_return_values_only():
+    arr = np.array([5, 1, 9, 3, 7])
+    values = topk(arr, 2, return_indices=False)
+    assert np.array_equal(values, np.array([9, 7]))
+
+
+def test_topk_k_equals_length():
+    arr = np.array([4, 2, 8])
+    values, indices = topk(arr, 3)
+    assert np.array_equal(values, np.array([8, 4, 2]))
+
+
+def test_topk_invalid_k_zero():
+    arr = np.array([1, 2, 3])
+    with pytest.raises(ValueError):
+        topk(arr, 0)
+
+
+def test_topk_invalid_k_too_large():
+    arr = np.array([1, 2, 3])
+    with pytest.raises(ValueError):
+        topk(arr, 4)
+
+
+def test_topk_invalid_input_dimension():
+    arr = np.array([[1, 2], [3, 4]])
+    with pytest.raises(ValueError):
+        topk(arr, 2)
+
+def test_quickselect_basic():
+    arr = np.array([5, 1, 9, 3, 7])
+    assert quickselect(arr, 0) == 1
+    assert quickselect(arr, 1) == 3
+    assert quickselect(arr, 2) == 5
+
+
+def test_quickselect_last():
+    arr = np.array([5, 1, 9, 3, 7])
+    assert quickselect(arr, 4) == 9
+
+
+def test_quickselect_invalid_k():
+    arr = np.array([1, 2, 3])
+    with pytest.raises(ValueError):
+        quickselect(arr, -1)
+
+    with pytest.raises(ValueError):
+        quickselect(arr, 3)
