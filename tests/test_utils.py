@@ -1,33 +1,56 @@
 import numpy as np
-import pytest
-
-from numcompute.utils import normalize, minmax_scale, clip
 
 
-def test_normalize():
-    arr = np.array([3, 4])
-    result = normalize(arr)
-    assert np.allclose(result, np.array([0.6, 0.8]))
+def _validate_numeric_array(x, name="x"):
+    try:
+        arr = np.asarray(x, dtype=float)
+    except Exception as e:
+        raise TypeError(f"{name} must be convertible to a numeric NumPy array.") from e
+    return arr
 
 
-def test_minmax_scale():
-    arr = np.array([1, 2, 3])
-    result = minmax_scale(arr)
-    assert np.allclose(result, np.array([0.0, 0.5, 1.0]))
+def logsumexp(x, axis=None, keepdims=False):
+    arr = _validate_numeric_array(x, name="x")
+
+    max_x = np.max(arr, axis=axis, keepdims=True)
+    shifted = arr - max_x
+    out = max_x + np.log(np.sum(np.exp(shifted), axis=axis, keepdims=True))
+
+    # 🔥 关键修复
+    if axis is None:
+        if keepdims:
+            return out
+        return float(out.squeeze())
+
+    if not keepdims:
+        out = np.squeeze(out, axis=axis)
+
+    return out
 
 
-def test_minmax_same_values():
-    arr = np.array([5, 5, 5])
-    result = minmax_scale(arr)
-    assert np.all(result == 0)
+def softmax(x, axis=-1):
+    arr = _validate_numeric_array(x, name="x")
+    lse = logsumexp(arr, axis=axis, keepdims=True)
+    return np.exp(arr - lse)
 
 
-def test_clip():
-    arr = np.array([1, 5, 10])
-    result = clip(arr, 2, 8)
-    assert np.array_equal(result, np.array([2, 5, 8]))
+def euclidean_distance(a, b, axis=-1):
+    a_arr = _validate_numeric_array(a, name="a")
+    b_arr = _validate_numeric_array(b, name="b")
+
+    try:
+        diff = a_arr - b_arr
+    except ValueError as e:
+        raise ValueError("a and b must be broadcast-compatible.") from e
+
+    return np.sqrt(np.sum(diff ** 2, axis=axis))
 
 
-def test_clip_invalid():
-    with pytest.raises(ValueError):
-        clip([1, 2, 3], 5, 2)
+def batch_iterator(X, batch_size):
+    arr = np.asarray(X)
+
+    if batch_size <= 0:
+        raise ValueError("batch_size must be a positive integer.")
+
+    for start in range(0, len(arr), batch_size):
+        yield arr[start:start + batch_size]

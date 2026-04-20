@@ -1,44 +1,51 @@
-"""
-utils.py
-
-Utility functions for data preprocessing.
-"""
-
 import numpy as np
 
 
-def normalize(data):
-    arr = np.asarray(data, dtype=float)
-
-    if arr.size == 0:
-        raise ValueError("Input must not be empty.")
-
-    norm = np.linalg.norm(arr)
-    if norm == 0:
-        return arr
-
-    return arr / norm
+def _validate_numeric_array(x, name="x"):
+    try:
+        arr = np.asarray(x, dtype=float)
+    except Exception as e:
+        raise TypeError(f"{name} must be convertible to a numeric NumPy array.") from e
+    return arr
 
 
-def minmax_scale(data):
-    arr = np.asarray(data, dtype=float)
+def logsumexp(x, axis=None, keepdims=False):
+    arr = _validate_numeric_array(x, name="x")
 
-    if arr.size == 0:
-        raise ValueError("Input must not be empty.")
+    max_x = np.max(arr, axis=axis, keepdims=True)
+    shifted = arr - max_x
+    out = max_x + np.log(np.sum(np.exp(shifted), axis=axis, keepdims=True))
 
-    min_val = np.min(arr)
-    max_val = np.max(arr)
+    if not keepdims and axis is not None:
+        out = np.squeeze(out, axis=axis)
 
-    if max_val == min_val:
-        return np.zeros_like(arr)
+    if axis is None and not keepdims:
+        return float(np.asarray(out))
+    return out
 
-    return (arr - min_val) / (max_val - min_val)
+
+def softmax(x, axis=-1):
+    arr = _validate_numeric_array(x, name="x")
+    lse = logsumexp(arr, axis=axis, keepdims=True)
+    return np.exp(arr - lse)
 
 
-def clip(data, min_value, max_value):
-    arr = np.asarray(data)
+def euclidean_distance(a, b, axis=-1):
+    a_arr = _validate_numeric_array(a, name="a")
+    b_arr = _validate_numeric_array(b, name="b")
 
-    if min_value > max_value:
-        raise ValueError("min_value must be <= max_value")
+    try:
+        diff = a_arr - b_arr
+    except ValueError as e:
+        raise ValueError("a and b must be broadcast-compatible.") from e
 
-    return np.clip(arr, min_value, max_value)
+    return np.sqrt(np.sum(diff ** 2, axis=axis))
+
+
+def batch_iterator(X, batch_size):
+    arr = np.asarray(X)
+    if batch_size <= 0:
+        raise ValueError("batch_size must be a positive integer.")
+
+    for start in range(0, len(arr), batch_size):
+        yield arr[start:start + batch_size]
